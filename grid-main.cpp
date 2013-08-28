@@ -144,7 +144,7 @@ void time_scale_step(double *f_radius12,
 
 	double delta_tc = 1.0e30;
 	
-	for (int i=0; i< N_shell - 1; i++)
+	for (int i = 0; i < N_shell - 1; i++)
 	 delta_tc = min(delta_tc, f_radius12[i] / (abs(f_velocity[i]) + sqrt( (Gamma - 1) * f_energy[i])));
 	
 	delta_tc = delta_tc * CFLfactor;
@@ -160,7 +160,7 @@ void time_scale_step(double *f_radius12,
 	//check what is minimum if speed of shell or sound
 	delta_tc = min(delta_tc,delta_td);
 
-	f_dtime[0]   = 0.5 * (f_dtime[1] + delta_tc);
+	f_dtime[0] = 0.5 * (f_dtime[1] + delta_tc);
     f_dtime[1] = delta_tc;
 	if (DEBUG_MODE) printf("Time: %.8lf Time12: %.10lf \n",f_dtime[0], f_dtime[1]);
 }
@@ -190,7 +190,9 @@ void update_step(double *f_velocity,
 	// safe the radius before update; swap process?
 	// velocity update
 	for(int i = 1; i < N_shell; i++){
-		f_velocity[i] = f_velocity[i] - f_A[i] * f_dtime[0] / f_dmass[i] * ( (f_pressure[i] - f_pressure[i - 1]) - 0.5 * ( f_viscosity[i] * (3.0 * f_Ak12[i] - f_A[i]) - f_viscosity[i - 1] * (3.0 * f_Ak12[i - 1] - f_A[i])) );
+		f_velocity[i] = f_velocity[i] - f_A[i] * f_dtime[0] / f_dmass[i] * (f_pressure[i] - f_pressure[i - 1]) 
+						- 0.5 * ( f_viscosity[i] * (3.0 * f_Ak12[i] - f_A[i]) 
+								- f_viscosity[i - 1] * (3.0 * f_Ak12[i - 1] - f_A[i])) * f_dtime[0] / f_dmass[i] ;
 		//printf("%i %lf = %.8lf - %.8lf * %.8lf - %.8lf * %.8lf / %.8lf \n", i, f_velocity[i], f_velocity[i], f_A[i], f_pressure[i], f_pressure[i-1], f_dtime[0], f_dmass[i]);
 	}
 
@@ -206,17 +208,21 @@ void update_step(double *f_velocity,
 	for (int i = 0; i < N_shell - 1; i++){
 		f_radius12[i] = f_radius[i + 1] - f_radius[i];
 		f_Ak12[i]     = 0.5 * (f_A12[i + 1] + f_A12[i]);
+		f_radius12[i] = f_radius[i + 1] - f_radius[i];
 		f_rho[i]      = f_dmass12[i] / (f_volume[i + 1] - f_volume[i]);
+		f_viscosity[i]= - Art_viscosity * Art_viscosity * f_rho[i] * fabs(f_velocity[i + 1] - f_velocity[i]) 
+						* ( f_velocity[i + 1] * (1.0 - f_A12[i + 1] / 3.0 / f_Ak12[i]) 
+						  - f_velocity[i] * (1.0 - f_A12[i] / 3.0 / f_Ak12[i]));
 	}
-	// boundary?
-	//f_rho[N_shell] = f_rho[N_shell - 1];
+	// boundary of the density?
+	f_rho[N_shell] = f_rho[N_shell - 1];
 
 	// artificial viscosity
 	
 }
 //***************************************************************
 
-// main function of hydrocode to evaluate a star collapse? 
+// main function of hydrocode to evaluate a star collapse
 //
 int main(int argc, char *argv[]){
 	
@@ -258,10 +264,10 @@ int main(int argc, char *argv[]){
 	time_scale_step(radius12, velocity, energy, volume, A12, time, dtime);
 	
 	// update the values to next step
-	debug_print(velocity, "vel", N_shell);
+	debug_print(viscosity, "vel", N_shell - 1);
 	update_step(velocity, A, A12, Ak12, pressure, rho, dtime, dmass, dmass12, volume, viscosity, radius, radius12);
 	printf("*****************************\n");
-	debug_print(velocity, "vel", N_shell);
+	debug_print(viscosity, "vel", N_shell - 1);
 	}
 	/*
 	output = fopen("output.dat","w");
@@ -272,7 +278,7 @@ int main(int argc, char *argv[]){
 		}
 	}*/
 	
-	system("PAUSE");
+//	system("PAUSE");
 	
 	// clean up process; be a good kid!
 
