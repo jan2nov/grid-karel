@@ -175,6 +175,7 @@ void update_step(double *f_velocity,
 				 double *f_Ak12,
 				 double *f_pressure,
 				 double *f_rho,
+				 double *f_energy,
 				 double *f_dtime,
 				 double *f_dmass,
 				 double *f_dmass12,
@@ -184,8 +185,9 @@ void update_step(double *f_velocity,
 				 double *f_radius12){
 
 	double old_radius[N_shell];
+	double old_energy[N_shell];
 	
-	//in not cartesian set the v(0) to zero
+	//in no cartesian set the v(0) to zero
 	f_velocity[0] = 0.0;
 	// safe the radius before update; swap process?
 	// velocity update
@@ -213,11 +215,17 @@ void update_step(double *f_velocity,
 		f_viscosity[i]= - Art_viscosity * Art_viscosity * f_rho[i] * fabs(f_velocity[i + 1] - f_velocity[i]) 
 						* ( f_velocity[i + 1] * (1.0 - f_A12[i + 1] / 3.0 / f_Ak12[i]) 
 						  - f_velocity[i] * (1.0 - f_A12[i] / 3.0 / f_Ak12[i]));
+		if (f_velocity[i + 1] > f_velocity[i]) f_viscosity[i] = 0.0;
 	}
 	// boundary of the density?
 	f_rho[N_shell] = f_rho[N_shell - 1];
+	
+	// internal energies and pressure
+	for (int i = 0; i < N_shell - 1; i++){
+		old_energy[i] = f_energy[i] - f_pressure[i] * (f_A12[i + 1] * f_velocity[i + 1] - f_A12[i] * f_velocity[i]) * f_dtime[1] / f_dmass12[i];
+		f_pressure[i] = 0.5 * (f_pressure[i] + (Gamma - 1.0) * f_rho[i] * old_energy[i]);
+	}
 
-	// artificial viscosity
 	
 }
 //***************************************************************
@@ -264,10 +272,10 @@ int main(int argc, char *argv[]){
 	time_scale_step(radius12, velocity, energy, volume, A12, time, dtime);
 	
 	// update the values to next step
-	debug_print(viscosity, "vel", N_shell - 1);
-	update_step(velocity, A, A12, Ak12, pressure, rho, dtime, dmass, dmass12, volume, viscosity, radius, radius12);
+	debug_print(pressure, "Press", N_shell - 1);
+	update_step(velocity, A, A12, Ak12, pressure, rho, energy, dtime, dmass, dmass12, volume, viscosity, radius, radius12);
 	printf("*****************************\n");
-	debug_print(viscosity, "vel", N_shell - 1);
+	debug_print(pressure, "Press", N_shell - 1);
 	}
 	/*
 	output = fopen("output.dat","w");

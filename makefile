@@ -1,7 +1,8 @@
 CC = g++
 PROCESOR = x86-64
 OBJ = grid-main.o
-CCOPTS = -pedantic -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -fshort-enums -fno-common 
+#CCOPTS = -pedantic -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -fshort-enums -fno-common
+CCOPTS = -pedantic  
 #-march=$(PROCESOR) -mtune=$(PROCESOR)
 EXE = main.out
 REMOVE = @rm -vf
