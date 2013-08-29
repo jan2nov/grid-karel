@@ -215,6 +215,7 @@ void update_step(double *f_velocity,
 		f_viscosity[i]= - Art_viscosity * Art_viscosity * f_rho[i] * fabs(f_velocity[i + 1] - f_velocity[i]) 
 						* ( f_velocity[i + 1] * (1.0 - f_A12[i + 1] / 3.0 / f_Ak12[i]) 
 						  - f_velocity[i] * (1.0 - f_A12[i] / 3.0 / f_Ak12[i]));
+		// divergence velocity > 0 condition
 		if (f_velocity[i + 1] > f_velocity[i]) f_viscosity[i] = 0.0;
 	}
 	// boundary of the density?
@@ -224,9 +225,15 @@ void update_step(double *f_velocity,
 	for (int i = 0; i < N_shell - 1; i++){
 		old_energy[i] = f_energy[i] - f_pressure[i] * (f_A12[i + 1] * f_velocity[i + 1] - f_A12[i] * f_velocity[i]) * f_dtime[1] / f_dmass12[i];
 		f_pressure[i] = 0.5 * (f_pressure[i] + (Gamma - 1.0) * f_rho[i] * old_energy[i]);
+		f_energy[i]   = f_energy[i] - f_pressure[i] * (f_A12[i + 1] * f_velocity[i + 1] - f_A12[i] * f_velocity[i]) * f_dtime[1] / f_dmass12[i];
+		f_energy[i]  -= 0.5 * f_viscosity[i] * f_dtime[1] / f_dmass12[i] * (f_velocity[i + 1] * (3.0 *f_Ak12[i] - f_A12[i + 1]) - f_velocity[i] * (3.0 * f_Ak12[i] - f_A12[i]));
+		f_pressure[i] = (Gamma - 1.0) * f_rho[i] * f_energy[i];
 	}
 
-	
+	// boundary of energy and pressure
+	f_pressure[N_shell - 1] = f_pressure[N_shell - 2];
+	f_energy[N_shell - 1] = f_energy[N_shell - 2];
+
 }
 //***************************************************************
 
@@ -272,10 +279,12 @@ int main(int argc, char *argv[]){
 	time_scale_step(radius12, velocity, energy, volume, A12, time, dtime);
 	
 	// update the values to next step
-	debug_print(pressure, "Press", N_shell - 1);
+	printf("%lf\n",time);
+	debug_print(energy, "Press", N_shell );
 	update_step(velocity, A, A12, Ak12, pressure, rho, energy, dtime, dmass, dmass12, volume, viscosity, radius, radius12);
 	printf("*****************************\n");
-	debug_print(pressure, "Press", N_shell - 1);
+	debug_print(energy, "Press", N_shell );
+	printf("%lf\n",time);
 	}
 	/*
 	output = fopen("output.dat","w");
